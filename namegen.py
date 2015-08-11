@@ -47,3 +47,34 @@ def parse_name(dicts, counts, in_name):
     else:
         counts[prev_letter] += 1
 
+
+ def gen_name(dicts, counts, len=45, ignore_ends=False):
+    prev_letter = '^'
+    output = []
+    count = 0
+    
+    while count < len:
+        curr_dict = dicts[prev_letter]
+        curr_total = float(counts[prev_letter])
+        prev_num = 0.0
+        r = random.random()
+        for k in curr_dict:
+            ratio = curr_dict[k] / curr_total
+            
+            # The random selector falls in the range of this letter
+            if prev_num <= r < (prev_num + ratio):
+                if k == '$':
+                    # TODO: if ignore_ends:
+                    count = len
+                else:
+                    output.append(k)
+                    prev_letter = k
+                
+                break
+            else:
+                prev_num += ratio
+        
+        count += 1
+    
+    return "".join(output)
+    
