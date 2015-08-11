@@ -48,7 +48,7 @@ def parse_name(dicts, counts, in_name):
         counts[prev_letter] += 1
 
 
- def gen_name(dicts, counts, len=45, ignore_ends=False):
+def gen_name(dicts, counts, len=45, ignore_ends=False):
     prev_letter = '^'
     output = []
     count = 0
@@ -58,13 +58,17 @@ def parse_name(dicts, counts, in_name):
         curr_total = float(counts[prev_letter])
         prev_num = 0.0
         r = random.random()
+        retry = False
         for k in curr_dict:
             ratio = curr_dict[k] / curr_total
             
             # The random selector falls in the range of this letter
             if prev_num <= r < (prev_num + ratio):
                 if k == '$':
-                    # TODO: if ignore_ends:
+                    # This is not very efficient
+                    if ignore_ends:
+                        retry = True
+                        break
                     count = len
                 else:
                     output.append(k)
@@ -73,6 +77,9 @@ def parse_name(dicts, counts, in_name):
                 break
             else:
                 prev_num += ratio
+        
+        if retry:
+            continue
         
         count += 1
     
