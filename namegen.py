@@ -182,6 +182,50 @@ def gen_name(dicts, counts, len=45, ignore_ends=False):
     return "".join(output)
 
 
+def gen_name2(dicts, counts, size=45, strict_length=False):
+    prev_symbol = '^'
+    output = []
+    count = 0
+    
+    # Generate names with max length, size
+    while count < size:
+        curr_dict = dicts[prev_symbol]
+        curr_total = float(counts[prev_symbol])
+        prev_num = 0.0
+        r = random.random()
+        retry = False
+        # Iterate through all letters that follow prev_symbol
+        for k in curr_dict:
+            ratio = curr_dict[k] / curr_total
+            
+            # The random selector falls in the range of this symbol
+            if prev_num <= r < (prev_num + ratio):
+                if strict_length:
+                    # This is not very efficient
+                    if k == '$' or (len(k) + count) > size:
+                        retry = True
+                        break
+                
+                # if selected symbol is end-of-word
+                if k == '$':
+                    count = size
+                else:
+                    output.append(k)
+                    prev_symbol = k
+                
+                break
+            else:
+                prev_num += ratio
+        
+        if retry:
+            continue
+        
+        count += len(prev_symbol)
+        prev_symbol = prev_symbol[-1]
+    
+    return "".join(output)
+
+
 def save_state(dicts, counts, filename):
     output_file = open(filename, 'wb')
     
