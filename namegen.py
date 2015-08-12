@@ -1,4 +1,5 @@
 import random
+import cPickle
 
 name = "matthew"
 dicts = {}
@@ -53,17 +54,20 @@ def gen_name(dicts, counts, len=45, ignore_ends=False):
     output = []
     count = 0
     
+    # Generate names with max length, len
     while count < len:
         curr_dict = dicts[prev_letter]
         curr_total = float(counts[prev_letter])
         prev_num = 0.0
         r = random.random()
         retry = False
+        # Iterate through all letters that follow prev_letter
         for k in curr_dict:
             ratio = curr_dict[k] / curr_total
             
             # The random selector falls in the range of this letter
             if prev_num <= r < (prev_num + ratio):
+                # if selected letter is end-of-word
                 if k == '$':
                     # This is not very efficient
                     if ignore_ends:
@@ -84,4 +88,25 @@ def gen_name(dicts, counts, len=45, ignore_ends=False):
         count += 1
     
     return "".join(output)
+
+
+def save_state(dicts, counts, filename):
+    output_file = open(filename, 'wb')
     
+    cPickle.dump(dicts, output_file)
+    
+    cPickle.dump(counts, output_file)
+    
+    output_file.close()
+
+
+def restore_state(filename, dicts, counts):
+    input_file = open(filename, 'rb')
+    
+    dicts.update(cPickle.load(input_file))
+    
+    counts.update(cPickle.load(input_file))
+    
+    input_file.close()
+
+
