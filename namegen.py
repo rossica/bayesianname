@@ -49,6 +49,45 @@ def parse_name(dicts, counts, in_name):
         counts[prev_letter] += 1
 
 
+def parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, curr_symbol):
+    if prev_symbol not in dicts:
+            dicts[prev_symbol] = {}
+    
+    curr_dict = dicts[prev_symbol]
+    
+    # add current symbol to current dictionary
+    if curr_symbol not in curr_dict:
+        curr_dict[curr_symbol] = 1
+    else:
+        curr_dict[curr_symbol] += 1
+    
+    # Increment total symbols for prev_symbol
+    if prev_symbol not in counts:
+        counts[prev_symbol] = 1
+    else:
+        counts[prev_symbol] += 1
+    
+    # also add to dictionary of last letter of prev_symbol
+    if cross_pollinate:
+        # don't double-add the first symbol
+        if prev_symbol != '^' and prev_symbol != prev_symbol[-1]:
+            prev_symbol_end = prev_symbol[-1]
+            if prev_symbol_end not in dicts:
+                dicts[prev_symbol_end] = {}
+            
+            other_dict = dicts[prev_symbol_end]
+            
+            if curr_symbol not in other_dict:
+                other_dict[curr_symbol] = 1
+            else:
+                other_dict[curr_symbol] += 1
+            
+            if prev_symbol_end not in counts:
+                counts[prev_symbol_end] = 1
+            else:
+                counts[prev_symbol_end] += 1
+
+
 def parse_name2(dicts, counts, size, in_name, cross_pollinate=True):
     name = in_name.lower()
     prev_symbol = '^'
@@ -57,90 +96,23 @@ def parse_name2(dicts, counts, size, in_name, cross_pollinate=True):
     # Iterate over all symbols of length 'size' in 'name', including the fractional
     # last symbol, which may be less than 'size' in length
     while idx < len(name):
-        if prev_symbol not in dicts:
-            dicts[prev_symbol] = {}
-        
-        curr_dict = dicts[prev_symbol]
         # Side effect: when string slicing with an end point beyond
         # the end of the string, it just returns the last part of
         # string.
         curr_symbol = name[idx:idx+size]
         
-        # add current symbol to current dictionary
-        if curr_symbol not in curr_dict:
-            curr_dict[curr_symbol] = 1
-        else:
-            curr_dict[curr_symbol] += 1
-        
-        # Increment total symbols for prev_symbol
-        if prev_symbol not in counts:
-            counts[prev_symbol] = 1
-        else:
-            counts[prev_symbol] += 1
-        
-        # also add to dictionary of last letter of prev_symbol
-        if cross_pollinate:
-            # don't double-add the first symbol
-            if prev_symbol != '^' and prev_symbol != prev_symbol[-1]:
-                prev_symbol_end = prev_symbol[-1]
-                if prev_symbol_end not in dicts:
-                    dicts[prev_symbol_end] = {}
-                
-                other_dict = dicts[prev_symbol_end]
-                
-                if curr_symbol not in other_dict:
-                    other_dict[curr_symbol] = 1
-                else:
-                    other_dict[curr_symbol] += 1
-                
-                if prev_symbol_end not in counts:
-                    counts[prev_symbol_end] = 1
-                else:
-                    counts[prev_symbol_end] += 1
+        parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, curr_symbol)
         
         # Move to the next symbol
         prev_symbol = curr_symbol
         idx += size
     
     # Add the end-of-word symbol
-    if prev_symbol not in dicts:
-        dicts[prev_symbol] = {}
-    
-    curr_dict = dicts[prev_symbol]
-    
-    # add current symbol to current dictionary
-    if '$' not in curr_dict:
-        curr_dict['$'] = 1
-    else:
-        curr_dict['$'] += 1
-    
-    # Increment total symbols for prev_symbol
-    if prev_symbol not in counts:
-        counts[prev_symbol] = 1
-    else:
-        counts[prev_symbol] += 1
-    
-    # also add to the dictionary of last letter of prev_symbol
-    if cross_pollinate:
-        # don't double-add the end-of-word symbol to single-letter symbols
-        if prev_symbol != prev_symbol[-1]:
-            prev_symbol_end = prev_symbol[-1]
-            if prev_symbol_end not in dicts:
-                dicts[prev_symbol_end] = {}
-            
-            other_dict = dicts[prev_symbol_end]
-            
-            if '$' not in other_dict:
-                other_dict['$'] = 1
-            else:
-                other_dict['$'] += 1
-            
-            if prev_symbol_end not in counts:
-                counts[prev_symbol_end] = 1
-            else:
-                counts[prev_symbol_end] += 1
+    parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, '$')
 
 
+
+# Note: can't use databases created with parse_name2
 def gen_name(dicts, counts, len=45, ignore_ends=False):
     prev_letter = '^'
     output = []
