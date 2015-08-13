@@ -5,6 +5,7 @@ name = "matthew"
 dicts = {}
 counts = {}
 
+# Parses names into inter-letter dependencies
 def parse_name(dicts, counts, in_name):
     name = in_name.lower()
     prev_letter = '^'
@@ -67,11 +68,12 @@ def parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, curr_s
     else:
         counts[prev_symbol] += 1
     
-    # also add to dictionary of last letter of prev_symbol
+    # TODO: cross_pollinate doesn't work well; it creates orphans
+    # also add to dictionary of sub-symbols of prev_symbol
     if cross_pollinate:
-        # don't double-add the first symbol
-        if prev_symbol != '^' and prev_symbol != prev_symbol[-1]:
-            prev_symbol_end = prev_symbol[-1]
+        # don't double-add the first symbol or single-letter symbols
+        if prev_symbol != '^' and len(prev_symbol) > 1:
+            prev_symbol_end = prev_symbol[-(size-1):]
             if prev_symbol_end not in dicts:
                 dicts[prev_symbol_end] = {}
             
@@ -88,6 +90,9 @@ def parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, curr_s
                 counts[prev_symbol_end] += 1
 
 
+
+# parses names into symbols which may be longer than 1 letter and stores
+# inter-symbol dependencies
 def parse_name2(dicts, counts, size, in_name, cross_pollinate=True):
     name = in_name.lower()
     prev_symbol = '^'
@@ -111,6 +116,8 @@ def parse_name2(dicts, counts, size, in_name, cross_pollinate=True):
     parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, '$')
 
 
+# parses names using a sliding window
+def parse_name3(): pass
 
 # Note: can't use databases created with parse_name2
 def gen_name(dicts, counts, len=45, ignore_ends=False):
@@ -158,6 +165,7 @@ def gen_name2(dicts, counts, size=45, strict_length=False):
     prev_symbol = '^'
     output = []
     count = 0
+    retry = 0
     
     # Generate names with max length, size
     while count < size:
@@ -165,7 +173,6 @@ def gen_name2(dicts, counts, size=45, strict_length=False):
         curr_total = float(counts[prev_symbol])
         prev_num = 0.0
         r = random.random()
-        retry = False
         # Iterate through all letters that follow prev_symbol
         for k in curr_dict:
             ratio = curr_dict[k] / curr_total
@@ -175,13 +182,14 @@ def gen_name2(dicts, counts, size=45, strict_length=False):
                 if strict_length:
                     # This is not very efficient
                     if k == '$' or (len(k) + count) > size:
-                        retry = True
+                        retry += 1
                         break
                 
                 # if selected symbol is end-of-word
                 if k == '$':
                     count = size
                 else:
+                    retry = 0
                     output.append(k)
                     prev_symbol = k
                 
@@ -189,11 +197,14 @@ def gen_name2(dicts, counts, size=45, strict_length=False):
             else:
                 prev_num += ratio
         
-        if retry:
+        # Prevent infinite loops in conditions that cannot be met
+        if retry > 10000:
+            break
+        elif retry > 0:
             continue
         
+        retry = 0
         count += len(prev_symbol)
-        prev_symbol = prev_symbol[-1]
     
     return "".join(output)
 
