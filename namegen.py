@@ -240,3 +240,25 @@ def parse_names_from_file(size, file, dicts, counts):
     
     close(f)
 
+
+# A function to help measure the efficacy of the parsing algorithm
+# by counting the number of unreachable start states (orphans)
+def count_orphans(dicts):
+    orphans = {}
+    for k in dicts:
+        is_orphan = True
+        for k2 in dicts:
+            for k3 in dicts[k2]:
+                if k3 == k:
+                    is_orphan = False
+                    break
+         
+        # don't count start symbol as orphan
+        if is_orphan and k != '^':
+            orphans[k] = ''
+    
+    if len(orphans):
+        print list(orphans.viewkeys())
+    return len(orphans)
+
+
