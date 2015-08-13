@@ -235,10 +235,10 @@ def parse_names_from_file(size, file, dicts, counts):
     for line in f:
         symbol_size = size
         while symbol_size > 0:
-            parse_name2(dicts, counts, symbol_size, line)
+            parse_name2(dicts, counts, symbol_size, line.strip())
             symbol_size -= 1
     
-    close(f)
+    f.close()
 
 
 # A function to help measure the efficacy of the parsing algorithm
