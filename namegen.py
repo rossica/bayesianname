@@ -116,11 +116,16 @@ def parse_name2(dicts, counts, size, in_name, cross_pollinate=True):
     parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, '$')
 
 
-# parses names using a sliding window
-def parse_name3(): pass
+# parses names into a probabilistic trie
+# a node in this trie is a tuple of the form: (symbol, symbol_count child_count, child_dict)
+## Note: Not doing this because it wont generate random new names, it'll only return names
+## it was trained with.
+def parse_name3(root, size, in_name): pass
+    
 
 # Note: can't use databases created with parse_name2
 def gen_name(dicts, counts, len=45, ignore_ends=False):
+    import random
     prev_letter = '^'
     output = []
     count = 0
@@ -162,6 +167,7 @@ def gen_name(dicts, counts, len=45, ignore_ends=False):
 
 
 def gen_name2(dicts, counts, size=45, strict_length=False):
+    import random
     prev_symbol = '^'
     output = []
     count = 0
@@ -210,6 +216,7 @@ def gen_name2(dicts, counts, size=45, strict_length=False):
 
 
 def save_state(dicts, counts, filename):
+    import cPickle
     output_file = open(filename, 'wb')
     
     cPickle.dump(dicts, output_file)
@@ -220,6 +227,7 @@ def save_state(dicts, counts, filename):
 
 
 def restore_state(filename, dicts, counts):
+    import cPickle
     input_file = open(filename, 'rb')
     
     dicts.update(cPickle.load(input_file))
@@ -229,17 +237,37 @@ def restore_state(filename, dicts, counts):
     input_file.close()
 
 
-def parse_names_from_file(size, file, dicts, counts):
+def parse_names_from_file(file, cross_pollinate, size, dicts, counts):
     f = open(file, 'rU')
     
     for line in f:
         symbol_size = size
         while symbol_size > 0:
-            parse_name2(dicts, counts, symbol_size, line.strip())
+            parse_name2(dicts, counts, symbol_size, line.strip(), cross_pollinate)
             symbol_size -= 1
     
     f.close()
 
+
+def parse_names_from_files(path, cross_pollinate, size, dicts, counts):
+    import os
+    import fileinput
+    files = []
+    
+    entries = os.listdir(path)
+    for entry in entries:
+        if os.path.isfile(os.path.join(path, entry)):
+            files.append(os.path.join(path,entry))
+    
+    f = fileinput.input(files, False, False, -1, 'rU')
+    for line in f:
+        symbol_size = size
+        while symbol_size > 0:
+            parse_name2(dicts, counts, symbol_size, line.split(',',1)[0].strip(), cross_pollinate)
+            symbol_size -= 1
+    
+    f.close()
+    
 
 # A function to help measure the efficacy of the parsing algorithm
 # by counting the number of unreachable start states (orphans)
