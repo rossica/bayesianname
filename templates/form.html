@@ -1,0 +1,34 @@
+<HTML>
+    <form method="post" action="/generate">
+        Database to generate names from:
+        <select name="database">
+            {% for db in databases %}
+                <option value="{{db.0}}" {% if selected == db.0 %}selected{% endif %}>{{db.1}}</option>
+            {% endfor %}
+        </select>
+        <br>
+        <br>
+        How many letters per name? ({{minsz}}-{{maxsz}} allowed):
+        <input type="text" name="size" value="{{letters}}">
+        <br>
+        <br>
+        Strict name-length generation? <br>
+        <input type="radio" name="strict" value="1" {% if strict == 1 %} checked{%endif%} >Yes
+        <br>
+        <input type="radio" name="strict" value="0" {% if strict == 0 %} checked {%endif%} >No
+        <br>
+        <br>
+        How many names to generate? (1-{{maxct}} allowed):
+        <input type="text" name="count" value="{{cnt}}">
+        <br>
+        <br>
+        <input type="submit" value="Generate!">
+    </form>
+    <hr>
+    {% if error %}
+        <b><u>{{error}}</u></b>
+    {% endif %}
+    {% for name in results %}
+        <p>{{name}}</p>
+    {% endfor %}
+</HTML>

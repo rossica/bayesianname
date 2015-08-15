@@ -98,8 +98,8 @@ def parse_name2(dicts_and_counts, in_name, size, cross_pollinate=True):
     dicts = dicts_and_counts[0]
     counts = dicts_and_counts[1]
     
-    # Iterate over all symbols of length 'size' in 'name', including the fractional
-    # last symbol, which may be less than 'size' in length
+    # Iterate over all symbols of length 'size' in 'name', including the
+    # fractional last symbol, which may be less than 'size' in length
     while idx < len(name):
         # Side effect: when string slicing with an end point beyond
         # the end of the string, it just returns the last part of
@@ -133,7 +133,8 @@ def parse_name3(root, size, in_name): pass
 # 'y' in faye is incorrectly categorized as a consonant, and not a vowel
 # BUG: 'y' between two vowels is usually a consonant, but sometimes is a vowel. Can't create rules for this.
 def is_consonant(idx, name):
-    consonants = ('b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z')
+    consonants = ('b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm',
+                  'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z')
     vowels = ('a', 'e', 'i', 'o', 'u')
     
     if name[idx] in consonants or (name[idx] == 'y' and ((idx < (len(name)-1) and name[idx+1] in vowels))):
@@ -145,7 +146,8 @@ def is_consonant(idx, name):
 
 
 def is_vowel(idx, name):
-    consonants = ('b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z')
+    consonants = ('b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm',
+                  'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z')
     vowels = ('a', 'e', 'i', 'o', 'u')
     
     if name[idx] in vowels or \
@@ -167,10 +169,6 @@ def parse_name4(dicts_and_counts, in_name):
     counts = dicts_and_counts[1]
     
     while idx < len(name):
-        if prev_symbol not in dicts:
-            dicts[prev_symbol] = {}
-    
-        curr_dict = dicts[prev_symbol]
         runner = idx
         
         # Count run of consonants or vowels
@@ -300,9 +298,9 @@ def save_state(dicts_and_counts, filename):
     
     output_file = open(filename, 'wb')
     
-    cPickle.dump(dicts, output_file)
+    cPickle.dump(dicts, output_file, 2)
     
-    cPickle.dump(counts, output_file)
+    cPickle.dump(counts, output_file, 2)
     
     output_file.close()
 
@@ -321,7 +319,7 @@ def restore_state(filename):
     return (dicts, counts)
 
 
-# Parses names from given file, using function fn, and passes args fn_args to fn.
+# Parse names from given file, using function fn, and passes args fn_args to fn.
 # Assumes file is formatted with one name per line
 def parse_names_from_file(file, fn, *fn_args):
     f = open(file, 'rU')
