@@ -121,7 +121,70 @@ def parse_name2(dicts, counts, size, in_name, cross_pollinate=True):
 ## Note: Not doing this because it wont generate random new names, it'll only return names
 ## it was trained with.
 def parse_name3(root, size, in_name): pass
+
+# 'y' in faye is incorrectly categorized as a consonant, and not a vowel
+# BUG: 'y' between two vowels is usually a consonant, but sometimes is a vowel. Can't create rules for this.
+def is_consonant(idx, name):
+    consonants = ('b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z')
+    vowels = ('a', 'e', 'i', 'o', 'u')
     
+    if name[idx] in consonants or (name[idx] == 'y' and ((idx < (len(name)-1) and name[idx+1] in vowels))):
+        if name[idx] == 'y' and (idx > 0 and (name[idx-1] in consonants)):
+            return False
+        return True
+    else:
+        return False
+
+
+def is_vowel(idx, name):
+    consonants = ('b', 'c', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'm', 'n', 'p', 'q', 'r', 's', 't', 'v', 'w', 'x', 'z')
+    vowels = ('a', 'e', 'i', 'o', 'u')
+    
+    if name[idx] in vowels or \
+    (name[idx] == 'y' and ((idx > 0 and (name[idx-1] in consonants) or (idx < (len(name)-1) and name[idx+1] in consonants)))):
+        return True
+    else:
+        if name[idx] == 'y' and idx == (len(name)-1):
+            return True
+        return False
+
+
+# Parse names into consonant/vowel symbols
+def parse_name4(dicts, counts, in_name):
+    name = in_name.lower()
+    prev_symbol = '^'
+    idx = 0
+    
+    while idx < len(name):
+        if prev_symbol not in dicts:
+            dicts[prev_symbol] = {}
+    
+        curr_dict = dicts[prev_symbol]
+        runner = idx
+        
+        # Count run of consonants or vowels
+        if is_consonant(idx, name):
+            while runner < len(name) and is_consonant(runner, name):
+                runner += 1
+        elif is_vowel(idx, name):
+            while runner < len(name) and is_vowel(runner, name):
+                runner += 1
+        else:
+            print "Letter is not consonant or vowel; this is an error:", name[idx]
+            return
+        
+        # Make current symbol of consecutive consonants or vowels
+        curr_symbol = name[idx:runner]
+        
+        # Add to dictionaries
+        parse_name2_worker(dicts, counts, len(curr_symbol), False, prev_symbol, curr_symbol)
+        
+        prev_symbol = curr_symbol
+        idx = runner
+        
+    # Add the end-of-word symbol
+    parse_name2_worker(dicts, counts, len(prev_symbol), False, prev_symbol, '$')
+
 
 # Note: can't use databases created with parse_name2
 def gen_name(dicts, counts, len=45, ignore_ends=False):
