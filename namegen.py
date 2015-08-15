@@ -1,14 +1,12 @@
 import random
 import cPickle
 
-name = "matthew"
-dicts = {}
-counts = {}
-
 # Parses names into inter-letter dependencies
-def parse_name(dicts, counts, in_name):
+def parse_name(dicts_and_counts, in_name):
     name = in_name.lower()
     prev_letter = '^'
+    dicts = dicts_and_counts[0]
+    counts = dicts_and_counts[1]
     
     for curr_letter in name :
         if prev_letter not in dicts:
@@ -93,10 +91,12 @@ def parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, curr_s
 
 # parses names into symbols which may be longer than 1 letter and stores
 # inter-symbol dependencies
-def parse_name2(dicts, counts, size, in_name, cross_pollinate=True):
+def parse_name2(dicts_and_counts, in_name, size, cross_pollinate=True):
     name = in_name.lower()
     prev_symbol = '^'
     idx = 0
+    dicts = dicts_and_counts[0]
+    counts = dicts_and_counts[1]
     
     # Iterate over all symbols of length 'size' in 'name', including the fractional
     # last symbol, which may be less than 'size' in length
@@ -114,6 +114,14 @@ def parse_name2(dicts, counts, size, in_name, cross_pollinate=True):
     
     # Add the end-of-word symbol
     parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, '$')
+
+
+# Convenience function to provide previous functionality in parse_names_from_file
+def parse_name2b(dicts_and_counts, in_name, size, cross_pollinate=True):
+    symbol_size = size
+    while symbol_size > 0:
+        parse_name2(dicts_and_counts, in_name, symbol_size, cross_pollinate)
+        symbol_size -= 1
 
 
 # parses names into a probabilistic trie
@@ -144,16 +152,19 @@ def is_vowel(idx, name):
     (name[idx] == 'y' and ((idx > 0 and (name[idx-1] in consonants) or (idx < (len(name)-1) and name[idx+1] in consonants)))):
         return True
     else:
-        if name[idx] == 'y' and idx == (len(name)-1):
+        if name[idx] == 'y' and (idx == (len(name)-1) or name[idx+1] == 'y'):
+            # This covers words ending in y, or the first of double-y
             return True
         return False
 
 
 # Parse names into consonant/vowel symbols
-def parse_name4(dicts, counts, in_name):
+def parse_name4(dicts_and_counts, in_name):
     name = in_name.lower()
     prev_symbol = '^'
     idx = 0
+    dicts = dicts_and_counts[0]
+    counts = dicts_and_counts[1]
     
     while idx < len(name):
         if prev_symbol not in dicts:
@@ -170,28 +181,30 @@ def parse_name4(dicts, counts, in_name):
             while runner < len(name) and is_vowel(runner, name):
                 runner += 1
         else:
-            print "Letter is not consonant or vowel; this is an error:", name[idx]
+            print "Letter is not consonant or vowel; this is an error:", name[:idx], name[idx], name[idx+1:]
             return
         
         # Make current symbol of consecutive consonants or vowels
         curr_symbol = name[idx:runner]
         
         # Add to dictionaries
-        parse_name2_worker(dicts, counts, len(curr_symbol), False, prev_symbol, curr_symbol)
+        parse_name2_worker(dicts, counts, 0, False, prev_symbol, curr_symbol)
         
         prev_symbol = curr_symbol
         idx = runner
         
     # Add the end-of-word symbol
-    parse_name2_worker(dicts, counts, len(prev_symbol), False, prev_symbol, '$')
+    parse_name2_worker(dicts, counts, 0, False, prev_symbol, '$')
 
 
-# Note: can't use databases created with parse_name2
-def gen_name(dicts, counts, len=45, ignore_ends=False):
+# Note: can't use databases created with parse_name2 or greater
+def gen_name(dicts_and_counts, len=45, ignore_ends=False):
     import random
     prev_letter = '^'
     output = []
     count = 0
+    dicts = dicts_and_counts[0]
+    counts = dicts_and_counts[1]
     
     # Generate names with max length, len
     while count < len:
@@ -229,12 +242,14 @@ def gen_name(dicts, counts, len=45, ignore_ends=False):
     return "".join(output)
 
 
-def gen_name2(dicts, counts, size=45, strict_length=False):
+def gen_name2(dicts_and_counts, size=45, strict_length=False):
     import random
     prev_symbol = '^'
     output = []
     count = 0
     retry = 0
+    dicts = dicts_and_counts[0]
+    counts = dicts_and_counts[1]
     
     # Generate names with max length, size
     while count < size:
@@ -278,8 +293,11 @@ def gen_name2(dicts, counts, size=45, strict_length=False):
     return "".join(output)
 
 
-def save_state(dicts, counts, filename):
+def save_state(dicts_and_counts, filename):
     import cPickle
+    dicts = dicts_and_counts[0]
+    counts = dicts_and_counts[1]
+    
     output_file = open(filename, 'wb')
     
     cPickle.dump(dicts, output_file)
@@ -289,33 +307,45 @@ def save_state(dicts, counts, filename):
     output_file.close()
 
 
-def restore_state(filename, dicts, counts):
+def restore_state(filename):
     import cPickle
+    
     input_file = open(filename, 'rb')
     
-    dicts.update(cPickle.load(input_file))
+    dicts = cPickle.load(input_file)
     
-    counts.update(cPickle.load(input_file))
+    counts = cPickle.load(input_file)
     
     input_file.close()
+    
+    return (dicts, counts)
 
 
-def parse_names_from_file(file, cross_pollinate, size, dicts, counts):
+# Parses names from given file, using function fn, and passes args fn_args to fn.
+# Assumes file is formatted with one name per line
+def parse_names_from_file(file, fn, *fn_args):
     f = open(file, 'rU')
     
+    dicts_and_counts = (dict(), dict())
+    
     for line in f:
-        symbol_size = size
-        while symbol_size > 0:
-            parse_name2(dicts, counts, symbol_size, line.strip(), cross_pollinate)
-            symbol_size -= 1
+        fn(dicts_and_counts, line.strip(), *fn_args)
     
     f.close()
+    
+    return dicts_and_counts
 
 
-def parse_names_from_files(path, cross_pollinate, size, dicts, counts):
+# Parses names from all files in folder specified by path, using function, fn,
+# and passes args, fn_args, to fn.
+# Assumes files are formatted with one name per line
+# TODO: currently parses out extra data from SSA baby names files. Remove this.
+def parse_names_from_files(path, fn, *fn_args):
     import os
     import fileinput
     files = []
+    
+    dicts_and_counts = (dict(), dict())
     
     entries = os.listdir(path)
     for entry in entries:
@@ -324,12 +354,11 @@ def parse_names_from_files(path, cross_pollinate, size, dicts, counts):
     
     f = fileinput.input(files, False, False, -1, 'rU')
     for line in f:
-        symbol_size = size
-        while symbol_size > 0:
-            parse_name2(dicts, counts, symbol_size, line.split(',',1)[0].strip(), cross_pollinate)
-            symbol_size -= 1
+        fn(dicts_and_counts, line.split(',',1)[0].strip(), *fn_args)
     
     f.close()
+    
+    return dicts_and_counts
     
 
 # A function to help measure the efficacy of the parsing algorithm
