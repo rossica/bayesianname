@@ -91,7 +91,7 @@ def parse_name2_worker(dicts, counts, size, cross_pollinate, prev_symbol, curr_s
 
 # parses names into symbols which may be longer than 1 letter and stores
 # inter-symbol dependencies
-def parse_name2(dicts_and_counts, in_name, size, cross_pollinate=True):
+def parse_name2(dicts_and_counts, in_name, size=1, cross_pollinate=True):
     name = in_name.lower()
     prev_symbol = '^'
     idx = 0
@@ -117,7 +117,7 @@ def parse_name2(dicts_and_counts, in_name, size, cross_pollinate=True):
 
 
 # Convenience function to provide previous functionality in parse_names_from_file
-def parse_name2b(dicts_and_counts, in_name, size, cross_pollinate=True):
+def parse_name2b(dicts_and_counts, in_name, size=1, cross_pollinate=True):
     symbol_size = size
     while symbol_size > 0:
         parse_name2(dicts_and_counts, in_name, symbol_size, cross_pollinate)
@@ -379,4 +379,42 @@ def count_orphans(dicts):
         print list(orphans.viewkeys())
     return len(orphans)
 
+
+def merge_dbs(list_src_dbs, out_dicts_and_counts):
+    out_d = out_dicts_and_counts[0]
+    out_c = out_dicts_and_counts[1]
+    
+    for dc in list_src_dbs:
+        d = dc[0]
+        c = dc[1]
+        # For all symbol dictionaries in the current source dictionary
+        for sym in d:
+            # If the symbol dictionary already exists in the merged dictionary
+            if sym in out_d:
+                tmp_d = out_d[sym]
+                src_d = d[sym]
+                
+                # Iterate and merge all counts from the symbol dictionary
+                for key in src_d:
+                    if key in tmp_d:
+                        tmp_d[key] += src_d[key]
+                    else:
+                        tmp_d[key] = src_d[key]
+            
+            # If the symbol dictionary doesn't exist in the merged dictionary
+            else:
+                out_d[sym] = d[sym]
+        
+        # For all symbols counts in the current source dictionary
+        for sym in c:
+            # Add the current count to the existing count
+            if sym in out_c:
+                out_c[sym] += c[sym]
+            # Or set the count in the merged dictionary
+            else:
+                out_c[sym] = c[sym]
+        
+        # It is assumed out_d and out_c are shelves, and we sync after every add
+        out_d.sync()
+        out_c.sync()
 

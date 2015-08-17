@@ -1,5 +1,6 @@
 from flask import Flask, url_for, render_template, request
 from namegen import gen_name2, restore_state
+import shelve
 app = Flask(__name__)
 
 ## Currently supported databases
@@ -7,7 +8,10 @@ dbs = (
         (1, "Baby names 1880-2014: 1st Order", "babynames-all-parse_name2-order1.pkl"),
         (2, "Baby names 1880-2014: 4th Order -Mix", "babynames-all-parse_name2-order4-mix.pkl"),
         (3, "Baby names 1880-2014: 4th Order -NoMix", "babynames-all-parse_name2-order4-nomix.pkl"),
-        (4, "Baby names 1880-2014: Phonetic", "babynames-all-parse_name4.pkl")
+        (4, "Baby names 1880-2014: Phonetic", "babynames-all-parse_name4.pkl"),
+        (5, "Surnames Census2000: 1st Order", "surnames-parse_name2-order1.pkl"),
+        (6, "Surnames Census2000: Phonetic", "surnames-parse_name4.pkl"),
+        (7, "All databases merged", "everything-sym.shlv", "everything-cnt.shlv")
        )
 
 MAX_SIZE = 15
@@ -68,7 +72,16 @@ def generate_names():
         ct = 0
         
         if db_idx not in loaded_dbs:
-            loaded_dbs[db_idx] = restore_state(dbs[db_idx][2])
+            # Ugly hack to special-case the everything database in a shelf
+            if db_idx == 6:
+                loaded_dbs[db_idx] = (shelve.open(dbs[db_idx][2],
+                                                  flag='r',
+                                                  protocol=2),
+                                      shelve.open(dbs[db_idx][3],
+                                                  flag='r',
+                                                  protocol=2))
+            else:
+                loaded_dbs[db_idx] = restore_state(dbs[db_idx][2])
         
         while ct < count:
             results.append(gen_name2(loaded_dbs[db_idx],size,strict).capitalize())
