@@ -1,5 +1,5 @@
 <HTML>
-    <form method="post" action="/generate">
+    <form method="post" action="{{ url_for('generate_names') }}">
         Database to generate names from:
         <select name="database">
             {% for db in databases %}
