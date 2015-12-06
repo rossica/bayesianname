@@ -1,34 +1,70 @@
 <HTML>
-    <form method="post" action="{{ url_for('generate_names') }}">
-        Database to generate names from:
-        <select name="database">
-            {% for db in databases %}
-                <option value="{{db.0}}" {% if selected == db.0 %}selected{% endif %}>{{db.1}}</option>
-            {% endfor %}
-        </select>
+  <head>
+    <title>bayesianname generator</title>
+  </head>
+  <body>
+  <form method="post" action="{{ url_for('generate_names') }}">
+    <fieldset>
+      <legend>Name Generator (using Markov Chains)</legend>
+      <label for="database">Database to generate names from:</label>
+      <select name="database">
+        {% for db in databases %}
+          {% if db.3 %}<optgroup label="{{db.3}}">{% endif %}
+          <option value="{{db.0}}" {% if selected == db.0 %}selected{% endif %}>{{db.1}}</option>
+          {% if db.4 %}</optgroup>{% endif %}
+        {% endfor %}
+      </select>
+      <br>
+      <br>
+      <label for="size">How many letters per name? ({{minsz}}-{{maxsz}} allowed):</label>
+      <input type="number" name="size" min="{{minsz}}" max="{{maxsz}}" size="2" value="{{letters}}">
+      <br>
+      <br>
+      <fieldset id="strict">
+        <Legend>Generate name with exact number of letters?</legend>
+        <label><input type="radio" name="strict" value="1" {% if strict == 1 %}checked{%endif%}>Yes</label>
         <br>
+        <label><input type="radio" name="strict" value="0" {% if strict == 0 %}checked{%endif%}>No</label>
+      </fieldset>
+      <br>
+      <label for="count">How many names to generate? (1-{{maxct}} allowed):</label>
+      <input type="number" name="count" min="1" max="{{maxct}}" size="3" value="{{cnt}}">
+      <br>
+      <br>
+      <fieldset id="show">
+        <legend>Show how name was generated?</legend>
+        <label><input type="radio" name="show" value="1" {% if show == 1 %}checked{%endif%}>Yes</label>
         <br>
-        How many letters per name? ({{minsz}}-{{maxsz}} allowed):
-        <input type="text" name="size" value="{{letters}}">
-        <br>
-        <br>
-        Strict name-length generation? <br>
-        <input type="radio" name="strict" value="1" {% if strict == 1 %} checked{%endif%} >Yes
-        <br>
-        <input type="radio" name="strict" value="0" {% if strict == 0 %} checked {%endif%} >No
-        <br>
-        <br>
-        How many names to generate? (1-{{maxct}} allowed):
-        <input type="text" name="count" value="{{cnt}}">
-        <br>
-        <br>
-        <input type="submit" value="Generate!">
-    </form>
-    <hr>
-    {% if error %}
-        <b><u>{{error}}</u></b>
-    {% endif %}
+        <label><input type="radio" name="show" value="0" {% if show == 0 %}checked{%endif%}>No</label>
+      </fieldset>
+      <br>
+      <label for="user_seed">Seed value for random number generation (Advanced):</label>
+      <input type="text" name="user_seed" maxlength="100" value="{{user_seed}}">
+      <br>
+      <br>
+      <input type="submit" value="Generate!">
+    </fieldset>
+  </form>
+  <hr>
+  {% if error %}
+    <b><u>{{error}} <mark>{{reason}}</mark></u></b>
+  {% endif %}
+  {% if seed and not user_seed %}
+    <em>Seed used to generate these names:</em> <code>{{seed}}</code>
+  {% endif %}
+  {% if show %}
+    <dl>
     {% for name in results %}
-        <p>{{name}}</p>
+      <p>
+      <dt>{{name | join | capitalize}}</dt>
+      <dd>{{name | join(' | ')}}</dd>
+      </p>
     {% endfor %}
+    </dl>
+  {% else %}
+    {% for name in results %}
+      <p>{{name | join | capitalize}}</p>
+    {% endfor %}
+  {% endif %}
+  </body>
 </HTML>

@@ -1,5 +1,5 @@
 import random
-import cPickle
+import pickle
 
 # Parses names into inter-letter dependencies
 def parse_name(dicts_and_counts, in_name):
@@ -179,7 +179,7 @@ def parse_name4(dicts_and_counts, in_name):
             while runner < len(name) and is_vowel(runner, name):
                 runner += 1
         else:
-            print "Letter is not consonant or vowel; this is an error:", name[:idx], name[idx], name[idx+1:]
+            print("Letter is not consonant or vowel; this is an error:", name[:idx], name[idx], name[idx+1:])
             return
         
         # Make current symbol of consecutive consonants or vowels
@@ -291,28 +291,98 @@ def gen_name2(dicts_and_counts, size=45, strict_length=False):
     return "".join(output)
 
 
+def gen_name3(dicts_and_counts, size, seed=0, strict_length=False):
+    prev_symbol = '^'
+    rand = random.Random()
+    output = []
+    count = 0
+    retry = 0
+    dicts = dicts_and_counts[0]
+    counts = dicts_and_counts[1]
+    
+    if seed != 0 and seed != "":
+        rand.seed(seed)
+    
+    # Generate names up to size, or until end-symbol is found
+    while (count < size) or ( (not strict_length) and prev_symbol != '$'):
+        curr_dict = dicts[prev_symbol]
+        curr_total = float(counts[prev_symbol])
+        prev_num = 0.0
+        r = rand.random()
+        # Iterate through all letters that follow prev_symbol
+        for k in curr_dict:
+            ratio = curr_dict[k] / curr_total
+            
+            # The random selector falls in the range of this symbol
+            if prev_num <= r < (prev_num + ratio):
+                if strict_length:
+                    # This is not very efficient
+                    if k == '$' or (len(k) + count) > size:
+                        retry += 1
+                        break
+                
+                # if selected symbol is end-of-word
+                if k == '$':
+                    count = size
+                    prev_symbol = '$'
+                else:
+                    retry = 0
+                    output.append(k)
+                    prev_symbol = k
+                
+                break
+            else:
+                prev_num += ratio
+        
+        # Prevent infinite loops in conditions that cannot be met
+        if retry > 10000:
+            break
+        elif retry > 0:
+            continue
+        
+        retry = 0
+        count += len(prev_symbol)
+    
+    return output
+
+
+def gen_name3b(dicts_and_counts, size, seed=0, count=1, strict_length=False):
+    
+    if seed == 0 or seed == "":
+        sr = random.SystemRandom()
+        seed = sr.getrandbits(64)
+    
+    seedgen = random.Random(seed)
+    results = []
+    itr = 0
+    
+    while itr < count:
+        temp = gen_name3(dicts_and_counts, size, seedgen.getrandbits(64), strict_length)
+        results.append(temp)
+        itr += 1
+    
+    return (seed, results)
+
+
 def save_state(dicts_and_counts, filename):
-    import cPickle
     dicts = dicts_and_counts[0]
     counts = dicts_and_counts[1]
     
     output_file = open(filename, 'wb')
     
-    cPickle.dump(dicts, output_file, 2)
+    pickle.dump(dicts, output_file, 2)
     
-    cPickle.dump(counts, output_file, 2)
+    pickle.dump(counts, output_file, 2)
     
     output_file.close()
 
 
 def restore_state(filename):
-    import cPickle
-    
     input_file = open(filename, 'rb')
     
-    dicts = cPickle.load(input_file)
+    dicts = pickle.load(input_file)
     
-    counts = cPickle.load(input_file)
+    counts = pickle.load(input_file)
     
     input_file.close()
     
@@ -376,7 +446,7 @@ def count_orphans(dicts):
             orphans[k] = ''
     
     if len(orphans):
-        print list(orphans.viewkeys())
+        print(list(orphans.viewkeys()))
     return len(orphans)
 
 

@@ -1,17 +1,17 @@
 from flask import Flask, url_for, render_template, request
-from namegen import gen_name2, restore_state
+from namegen import gen_name2, gen_name3b, restore_state
 import shelve
 app = Flask(__name__)
 
 ## Currently supported databases
 dbs = (
-        (1, "Baby names 1880-2014: 1st Order", "babynames-all-parse_name2-order1.pkl"),
-        (2, "Baby names 1880-2014: 4th Order -Mix", "babynames-all-parse_name2-order4-mix.pkl"),
-        (3, "Baby names 1880-2014: 4th Order -NoMix", "babynames-all-parse_name2-order4-nomix.pkl"),
-        (4, "Baby names 1880-2014: Phonetic", "babynames-all-parse_name4.pkl"),
-        (5, "Surnames Census2000: 1st Order", "surnames-parse_name2-order1.pkl"),
-        (6, "Surnames Census2000: Phonetic", "surnames-parse_name4.pkl"),
-        (7, "All databases merged", "everything-sym.shlv", "everything-cnt.shlv")
+        (1, "1-Letter chunks", "babynames-all-parse_name2-order1.pkl", "Baby Names 1880-2014", False),
+        (2, "4-letter chunks with mixing", "babynames-all-parse_name2-order4-mix.pkl", None, False),
+        (3, "4-letter chunks no mixing", "babynames-all-parse_name2-order4-nomix.pkl", None, False),
+        (4, "Phonetic (consonant/vowel)", "babynames-all-parse_name4.pkl", None, True),
+        (5, "1-letter chunks", "surnames-parse_name2-order1.pkl", "Surnames 2000 US Census", False),
+        (6, "Phonetic (consonant/vowel)", "surnames-parse_name4.pkl", None, True),
+        (7, "All databases merged", ("everything-sym.shlv", "everything-cnt.shlv"), None, False)
        )
 
 MAX_SIZE = 15
@@ -19,82 +19,113 @@ MIN_SIZE = 3
 MAX_COUNT = 100
 loaded_dbs = {}
 
-defaults = {'databases':dbs, 'maxsz':MAX_SIZE, 'minsz':MIN_SIZE, 
+default_parms = {'databases':dbs, 'maxsz':MAX_SIZE, 'minsz':MIN_SIZE,
             'maxct':MAX_COUNT, 'letters':7, 'cnt':10, 'strict':1,
-            'selected':1}
+            'selected':4, 'show':0}
 
-def validate_request(db_idx, size, strict, count):
+def validate_request(form):
+    clean_form = {}
     valid_db = False
     try:
         # validate db index
         for db in dbs:
-            if db[0] == int(db_idx):
+            if db[0] == int(form['database']):
                 valid_db = True
                 break
         
         if not valid_db:
-            return False
+            return ("Invalid database", clean_form)
+        else:
+            clean_form['database'] = int(form['database'])
         
         # validate size
-        if not (MIN_SIZE <= int(size) <= MAX_SIZE):
-            return False
+        if not (MIN_SIZE <= int(form['size']) <= MAX_SIZE):
+            return ("Invalid letter count", clean_form)
+        else:
+            clean_form['size'] = int(form['size'])
         
         # validate strictness
-        if strict not in ('1', '0'):
-            return False
+        if form['strict'] not in ('1', '0'):
+            return ("Invalid boolean value", clean_form)
+        else:
+            clean_form['strict'] = int(form['strict'])
         
         # validate count
-        if not (1 <= int(count) <= MAX_COUNT):
-            return False
+        if not (1 <= int(form['count']) <= MAX_COUNT):
+            return ("Invalid number of names", clean_form)
+        else:
+            clean_form['count'] = int(form['count'])
+         
+         # validate show symbols
+        if form['show'] not in ('1', '0'):
+            return ("Invalid boolean value", clean_form)
+        else:
+            clean_form['show'] = int(form['show'])
+        
+        # validate user_seed
+        if not form.has_key('user_seed'):
+            clean_form['user_seed'] = 0
+        else:
+            try:
+                clean_form['user_seed'] = int(form['user_seed'])
+            except:
+                clean_form['user_seed'] = form['user_seed']
+        
     except:
-        return False
+        return ("Type conversion error", clean_form)
     
-    return True
+    return (None, clean_form)
 
 
 @app.route('/')
 def form_page():
-    return render_template('form.html', **defaults)
+    return render_template('form.html', **default_parms)
 
 
-@app.route('/generate', methods=['POST'])
+@app.route('/generate/', methods=['POST'])
 def generate_names():
     results = []
     vars = {}
-    vars.update(defaults)
+    vars.update(default_parms)
     
-    if validate_request(request.form['database'], request.form['size'],
-                        request.form['strict'], request.form['count']):
-        db_idx = int(request.form['database']) - 1 # map it here
-        size = int(request.form['size'])
-        strict = int(request.form['strict'])
-        count = int(request.form['count'])
-        ct = 0
-        
+    error, clean_form = validate_request(request.form)
+    
+    if (error == None):
+        db_idx = clean_form['database'] - 1 # map it here
+        size = clean_form['size']
+        strict = clean_form['strict']
+        count = clean_form['count']
+        show = clean_form['show']
+        user_seed = clean_form['user_seed']
+      
         if db_idx not in loaded_dbs:
             # Ugly hack to special-case the everything database in a shelf
             if db_idx == 6:
-                loaded_dbs[db_idx] = (shelve.open(dbs[db_idx][2],
+                loaded_dbs[db_idx] = (shelve.open(dbs[db_idx][2][0],
                                                   flag='r',
                                                   protocol=2),
-                                      shelve.open(dbs[db_idx][3],
+                                      shelve.open(dbs[db_idx][2][1],
                                                   flag='r',
                                                   protocol=2))
             else:
                 loaded_dbs[db_idx] = restore_state(dbs[db_idx][2])
         
-        while ct < count:
-            results.append(gen_name2(loaded_dbs[db_idx],size,strict).capitalize())
-            ct += 1
+        results = gen_name3b(loaded_dbs[db_idx], size, user_seed, count, strict)
         
+        if(user_seed != 0 and user_seed != ""):
+            vars['user_seed'] = user_seed
         vars['letters'] = size
+        vars['seed'] = results[0]
         vars['cnt'] = count
-        vars['strict'] = int(strict)
+        vars['strict'] = strict
         vars['selected'] = db_idx + 1
-        vars['results'] = results
+        vars['results'] = results[1]
+        vars['show'] = show
         vars['error'] = None
     else:
-        vars['error'] = "Invalid parameters passed"
+        vars.update(clean_form)
+        vars['error'] = "Invalid parameter error: "
+        vars['reason'] = error
     
     return render_template('form.html', **vars)
 
