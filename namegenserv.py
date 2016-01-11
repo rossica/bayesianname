@@ -6,12 +6,12 @@ app = Flask(__name__)
 ## Currently supported databases
 dbs = (
         (1, "1-Letter chunks", "babynames-all-parse_name2-order1.pkl", "Baby Names 1880-2014", False),
-        (2, "4-letter chunks with mixing", "babynames-all-parse_name2-order4-mix.pkl", None, False),
-        (3, "4-letter chunks no mixing", "babynames-all-parse_name2-order4-nomix.pkl", None, False),
+        (2, "4,3,2,1-letter chunks mixed", "babynames-all-parse_name5-order4-mix.pkl", None, False),
+        (3, "4-letter chunks", "babynames-all-parse_name2-order4-nomix.pkl", None, False),
         (4, "Phonetic (consonant/vowel)", "babynames-all-parse_name4.pkl", None, True),
         (5, "1-letter chunks", "surnames-parse_name2-order1.pkl", "Surnames 2000 US Census", False),
         (6, "Phonetic (consonant/vowel)", "surnames-parse_name4.pkl", None, True),
-        (7, "All databases merged", ("everything-sym.shlv", "everything-cnt.shlv"), None, False)
+        (7, "All databases merged", ("everything2-sym.shlv", "everything2-cnt.shlv"), None, False)
        )
 
 MAX_SIZE = 15

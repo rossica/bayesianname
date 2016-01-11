@@ -195,6 +195,41 @@ def parse_name4(dicts_and_counts, in_name):
     parse_name2_worker(dicts, counts, 0, False, prev_symbol, '$')
 
 
+def parse_name5_recurse(dicts_and_counts, name, symbol_size, prev_symbol, idx):
+    dicts = dicts_and_counts[0]
+    counts = dicts_and_counts[1]
+    curr_size = 1
+    
+    while curr_size <= symbol_size and curr_size <= len(name):
+        if idx >= len(name):
+            # Add the end-of-word symbol
+            parse_name2_worker(dicts, counts, curr_size, False, prev_symbol, '$')
+            break
+        else:
+            # Side effect: when string slicing with an end point beyond
+            # the end of the string, it just returns the last part of
+            # string.
+            curr_symbol = name[idx:idx+curr_size]
+            # Add symbol
+            parse_name2_worker(dicts, counts, curr_size, False, prev_symbol, curr_symbol)
+            # recurse!
+            parse_name5_recurse(dicts_and_counts, name, symbol_size, curr_symbol, idx+curr_size)
+        
+        # Don't just keep iterating if at the end of the word
+        # this prevents over-counting
+        if curr_size < (len(name) - idx):
+            curr_size += 1
+        else:
+            break
+
+
+# Parse name into multi-sized symbols
+# This accomplishes what parse_name2's "cross_pollinate" flag was attempting
+def parse_name5(dicts_and_counts, in_name, symbol_size=1):
+    name = in_name.lower()
+    parse_name5_recurse(dicts_and_counts, name, symbol_size, '^', 0)
+
+
 # Note: can't use databases created with parse_name2 or greater
 def gen_name(dicts_and_counts, len=45, ignore_ends=False):
     import random
@@ -432,21 +467,13 @@ def parse_names_from_files(path, fn, *fn_args):
 # A function to help measure the efficacy of the parsing algorithm
 # by counting the number of unreachable start states (orphans)
 def count_orphans(dicts):
-    orphans = {}
-    for k in dicts:
-        is_orphan = True
-        for k2 in dicts:
-            for k3 in dicts[k2]:
-                if k3 == k:
-                    is_orphan = False
-                    break
-         
-        # don't count start symbol as orphan
-        if is_orphan and k != '^':
-            orphans[k] = ''
+    orphans = dicts.viewkeys()
+    for key in dicts:
+        orphans -= dicts[key].viewkeys()
     
+    orphans -= {'^'}
     if len(orphans):
-        print(list(orphans.viewkeys()))
+        print(list(orphans))
     return len(orphans)
 
 
