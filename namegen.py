@@ -326,7 +326,14 @@ def gen_name2(dicts_and_counts, size=45, strict_length=False):
     return "".join(output)
 
 
-def gen_name3(dicts_and_counts, size, seed=0, strict_length=False):
+def get_valid_prefix(dict, prefix):
+    while (prefix != '') and (prefix not in dict.keys()):
+        prefix = prefix[1:]
+    
+    return prefix
+
+
+def gen_name3(dicts_and_counts, size, seed=0, strict_length=False, prefix=''):
     prev_symbol = '^'
     rand = random.Random()
     output = []
@@ -335,7 +342,14 @@ def gen_name3(dicts_and_counts, size, seed=0, strict_length=False):
     dicts = dicts_and_counts[0]
     counts = dicts_and_counts[1]
     
-    if seed != 0 and seed != "":
+    if (get_valid_prefix(dicts, prefix) != ''):
+        output.append(prefix)
+        count = len(prefix)
+        # use the prefix as provided for output, but use the closest symbol
+        # actually in the dictionary for generation.
+        prev_symbol = get_valid_prefix(dicts, prefix)
+    
+    if (seed != 0) and (seed != ""):
         rand.seed(seed)
     
     # Generate names up to size, or until end-symbol is found
@@ -381,7 +395,7 @@ def gen_name3(dicts_and_counts, size, seed=0, strict_length=False):
     return output
 
 
-def gen_name3b(dicts_and_counts, size, seed=0, count=1, strict_length=False):
+def gen_name3b(dicts_and_counts, size, seed=0, count=1, strict_length=False, prefix=''):
     
     if seed == 0 or seed == "":
         sr = random.SystemRandom()
@@ -392,7 +406,7 @@ def gen_name3b(dicts_and_counts, size, seed=0, count=1, strict_length=False):
     itr = 0
     
     while itr < count:
-        temp = gen_name3(dicts_and_counts, size, seedgen.getrandbits(64), strict_length)
+        temp = gen_name3(dicts_and_counts, size, seedgen.getrandbits(64), strict_length, prefix)
         results.append(temp)
         itr += 1
     
@@ -477,6 +491,8 @@ def count_orphans(dicts):
     return len(orphans)
 
 
+# Open the output shevles with writeback=True, otherwise this will fail
+# spectacularly
 def merge_dbs(list_src_dbs, out_dicts_and_counts):
     out_d = out_dicts_and_counts[0]
     out_c = out_dicts_and_counts[1]

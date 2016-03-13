@@ -1,6 +1,7 @@
 from flask import Flask, url_for, render_template, request
 from namegen import gen_name2, gen_name3b, restore_state
 import shelve
+import re
 app = Flask(__name__)
 
 ## Currently supported databases
@@ -71,6 +72,12 @@ def validate_request(form):
             except:
                 clean_form['user_seed'] = form['user_seed']
         
+        # validate user prefix
+        if not form.has_key('prefix'):
+            clean_form['prefix'] = ''
+        else:
+            clean_form['prefix'] = re.sub('[^a-zA-Z]','',form['prefix'])
+        
     except:
         return ("Type conversion error", clean_form)
     
@@ -97,6 +104,7 @@ def generate_names():
         count = clean_form['count']
         show = clean_form['show']
         user_seed = clean_form['user_seed']
+        prefix = clean_form['prefix']
       
         if db_idx not in loaded_dbs:
             # Ugly hack to special-case the everything database in a shelf
@@ -110,10 +118,12 @@ def generate_names():
             else:
                 loaded_dbs[db_idx] = restore_state(dbs[db_idx][2])
         
-        results = gen_name3b(loaded_dbs[db_idx], size, user_seed, count, strict)
+        results = gen_name3b(loaded_dbs[db_idx], size, user_seed, count, strict, prefix)
         
         if(user_seed != 0 and user_seed != ""):
             vars['user_seed'] = user_seed
+        if(prefix != ""):
+            vars['prefix'] = prefix
         vars['letters'] = size
         vars['seed'] = results[0]
         vars['cnt'] = count
